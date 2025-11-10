@@ -1085,7 +1085,7 @@ async function startBot(loginWithEmail) {
                         global.GoatBot.Listening = api.listenMqtt(createCallBackListen());
                         global.GoatBot.callBackListen = callBackListen;
                         // ——————————————————— UPTIME ——————————————————— //
-                        if (global.GoatBot.config.serverUptime.enable == true && !global.GoatBot.config.dashBoard?.enable && !global.serverUptimeRunning) {
+                        if (global.GoatBot.config.serverUptime.enable == true && !global.GoatBot.config.dashBoard?.enable && !global.serverUptimeRunning && !process.env.SERVER_UPTIME_MANAGED) {
                                 const http = require('http');
                                 const express = require('express');
                                 const app = express();
@@ -1111,6 +1111,9 @@ async function startBot(loginWithEmail) {
                                 catch (err) {
                                         log.err("UPTIME", getText('login', 'openServerUptimeError'), err);
                                 }
+                        }
+                        else if (process.env.SERVER_UPTIME_MANAGED) {
+                                log.info("UPTIME", "Uptime server is managed by parent process");
                         }
 
 
