@@ -32,6 +32,9 @@ An event-driven architecture processes incoming Facebook messages through a hand
 
 ## Recent Changes
 
+### November 12, 2025
+- **changetheme command updated**: Fixed theme application to use `selectedTheme.id` instead of `selectedTheme.theme_fbid` as per neokex-fca API documentation. Added explicit handling for `FEATURE_UNAVAILABLE` error code to inform users when AI theme generation is restricted by Facebook for their account region/permissions.
+
 ### November 11, 2025
 - **neokex-fca upgraded to v4.0.0**: Updated from v3.3.0 to leverage new AI-powered theme generation features.
 - **changetheme command refactored**: Replaced OpenAI dependency with neokex-fca's built-in `createAITheme()` and `setThreadThemeMqtt()` methods for AI-based thread theme customization.
