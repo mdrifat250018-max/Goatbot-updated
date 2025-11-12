@@ -20,6 +20,7 @@ module.exports = {
         langs: {
                 vi: {
                         thinking: "◈ Đang tạo theme AI dựa trên mô tả của bạn...",
+                        generatingPreviews: "◈ Đang tạo theme preview...",
                         success: "◆ Đã thay đổi theme thành công!\n◈ Tên theme: %1\n◈ Mô tả: %2",
                         error: "◆ Đã xảy ra lỗi khi thay đổi theme: %1",
                         notGroup: "Lệnh này chỉ có thể sử dụng trong nhóm hoặc tin nhắn riêng",
@@ -27,10 +28,11 @@ module.exports = {
                         noThemes: "◆ Không thể tạo theme với mô tả này. Vui lòng thử mô tả khác!",
                         featureUnavailable: "◆ Tính năng tạo theme AI không khả dụng cho tài khoản này.\n◈ Đây là hạn chế từ Facebook dựa trên khu vực/quyền tài khoản của bạn.\n◈ Bạn vẫn có thể sử dụng các theme tiêu chuẩn có sẵn!",
                         currentThemeId: "◆ ID Theme hiện tại\n◈ Thread: %1\n◈ Theme ID: %2\n◈ Màu: %3",
-                        themeSuggestions: "◆ Gợi ý Theme\n\n🌙 DARK MODE:\n◈ %1\n◈ ID: %2\n\n☀️ LIGHT MODE:\n◈ %3\n◈ ID: %4\n\n💡 Sử dụng AI: {pn} <mô tả>"
+                        themePreview: "◆ Theme Preview\n\n🎨 %1\n◈ ID: %2\n\n💡 Sử dụng: {pn} <mô tả AI>"
                 },
                 en: {
                         thinking: "◈ Creating AI theme based on your description...",
+                        generatingPreviews: "◈ Generating theme previews...",
                         success: "◆ Theme changed successfully!\n◈ Theme name: %1\n◈ Description: %2",
                         error: "◆ An error occurred while changing theme: %1",
                         notGroup: "This command can only be used in groups or DMs",
@@ -38,7 +40,7 @@ module.exports = {
                         noThemes: "◆ Could not create a theme with this description. Please try a different description!",
                         featureUnavailable: "◆ AI theme generation is not available for this account.\n◈ This is a Facebook restriction based on your account's region/permissions.\n◈ You can still use all standard themes!",
                         currentThemeId: "◆ Current Theme ID\n◈ Thread: %1\n◈ Theme ID: %2\n◈ Color: %3",
-                        themeSuggestions: "◆ Theme Suggestions\n\n🌙 DARK MODE:\n◈ %1\n◈ ID: %2\n\n☀️ LIGHT MODE:\n◈ %3\n◈ ID: %4\n\n💡 Use AI: {pn} <description>"
+                        themePreview: "◆ Theme Preview\n\n🎨 %1\n◈ ID: %2\n\n💡 Use: {pn} <AI description>"
                 }
         },
 
@@ -59,36 +61,52 @@ module.exports = {
                         }
                 }
 
-                // Case 2: Show theme suggestions (dark & light mode)
+                // Case 2: Show theme previews
                 if (args.length === 0) {
+                        const loadingMsg = await message.reply(getLang("generatingPreviews"));
+                        
                         try {
-                                const allThemes = await api.getTheme(threadID);
+                                // Generate AI themes to get samples with full data
+                                const themes = await api.createAITheme("elegant modern theme");
                                 
-                                if (!Array.isArray(allThemes) || allThemes.length === 0) {
-                                        return message.reply(getLang("error", "Unable to fetch available themes"));
+                                try {
+                                        await message.unsend(loadingMsg.messageID);
+                                } catch (e) {}
+                                
+                                if (!themes || themes.length === 0) {
+                                        return message.reply(getLang("noThemes"));
                                 }
                                 
-                                // Find a dark mode theme
-                                const darkTheme = allThemes.find(t => 
-                                        t.name && (t.name.toLowerCase().includes("dark") || 
-                                        t.name.toLowerCase().includes("black") ||
-                                        t.name.toLowerCase().includes("midnight"))
-                                ) || allThemes.find(t => t.id === "283865976433569"); // Fallback to a known dark theme
+                                // Log the full theme object structure for debugging
+                                console.log("Theme structure:", JSON.stringify(themes[0], null, 2));
                                 
-                                // Find a light mode theme  
-                                const lightTheme = allThemes.find(t => 
-                                        t.name && (t.name.toLowerCase().includes("light") || 
-                                        t.name.toLowerCase().includes("white") ||
-                                        t.name.toLowerCase().includes("bright"))
-                                ) || allThemes.find(t => t.id === "1652456634878319"); // Fallback to a known light theme
+                                const theme = themes[0];
+                                let messageBody = "◆ Theme Preview\n\n";
+                                messageBody += `🎨 ${theme.accessibility_label || theme.name || "AI Theme"}\n`;
+                                messageBody += `◈ ID: ${theme.id}\n\n`;
+                                messageBody += `💡 Use: )changetheme <description> to apply`;
                                 
-                                return message.reply(getLang("themeSuggestions",
-                                        darkTheme?.name || "Dark Mode",
-                                        darkTheme?.id || "283865976433569",
-                                        lightTheme?.name || "Light Mode", 
-                                        lightTheme?.id || "1652456634878319"
-                                ));
+                                // Check if theme has preview/image data
+                                const attachments = [];
+                                if (theme.preview_url || theme.preview_image_url || theme.image_url) {
+                                        const imageUrl = theme.preview_url || theme.preview_image_url || theme.image_url;
+                                        attachments.push(imageUrl);
+                                }
+                                
+                                return message.reply({
+                                        body: messageBody,
+                                        attachment: attachments.length > 0 ? attachments : undefined
+                                });
+                                
                         } catch (error) {
+                                try {
+                                        await message.unsend(loadingMsg.messageID);
+                                } catch (e) {}
+                                
+                                if (error.code === 'FEATURE_UNAVAILABLE') {
+                                        return message.reply(getLang("featureUnavailable"));
+                                }
+                                
                                 return message.reply(getLang("error", error.message));
                         }
                 }
