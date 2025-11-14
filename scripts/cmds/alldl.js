@@ -9,12 +9,16 @@ async function download({ videoUrl, message, event }) {
     const apiResponse = await axios.get(apiUrl);
     const videoData = apiResponse.data;
 
-    if (!videoData || !videoData.cdnUrl) {
-      throw new Error("Invalid response or missing CDN URL from API.");
+    if (!videoData || !videoData.cdnUrl || !videoData.data || !videoData.data.title) {
+      throw new Error("Invalid response or missing CDN URL/data from API.");
     }
     
-    const { title, platform, cdnUrl } = videoData;
+    // Updated: Get title and platform from the 'data' object
+    const { title, source } = videoData.data;
+    const platform = source; // Using 'source' as 'platform'
+    const { cdnUrl } = videoData; 
 
+    // Use cdnUrl for streaming/download
     const videoStreamResponse = await axios({
       method: 'get',
       url: cdnUrl,
@@ -37,12 +41,11 @@ async function download({ videoUrl, message, event }) {
 
     message.reaction("✅", event.messageID);
 
-    // --- UPDATED REPLY BODY (NO BOLDING) ---
+    // Reply body as requested (no bolding)
     await message.reply({
       body: `Title: ${title}\nPlatform: ${platform}\nUrl: ${cdnUrl}`,
       attachment: fs.createReadStream(tempFilePath)
     });
-    // ----------------------------------------
     
     fs.unlinkSync(tempFilePath);
 
@@ -58,8 +61,8 @@ async function download({ videoUrl, message, event }) {
 module.exports = {
   config: {
     name: "alldl",
-    aliases: ["download","dl"],
-    version: "1.8", 
+    aliases: ["download"],
+    version: "1.9", // Version update
     author: "NeoKEX", 
     countDown: 5,
     role: 0,
@@ -76,6 +79,7 @@ module.exports = {
       if (role >= 1) {
         const choice = args[0] === 'on' || args[1] === 'on';
         await threadsData.set(event.threadID, { data: { autoDownload: choice } });
+        // No bolding here as requested globally
         return message.reply(`Auto-download has been turned ${choice ? 'on' : 'off'} for this group.`);
       } else {
         return message.reply("You don't have permission to toggle auto-download.");
