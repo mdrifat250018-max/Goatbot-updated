@@ -70,7 +70,6 @@ COPY --chown=nodeuser:nodeuser func ./func
 COPY --chown=nodeuser:nodeuser languages ./languages
 COPY --chown=nodeuser:nodeuser logger ./logger
 COPY --chown=nodeuser:nodeuser scripts ./scripts
-COPY --chown=nodeuser:nodeuser neokex-fca ./neokex-fca
 
 # Rebuild font cache for Canvas (Alpine uses fc-cache directly)
 RUN fc-cache -f -v
